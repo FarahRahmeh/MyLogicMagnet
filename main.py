@@ -20,10 +20,7 @@ levels = [
         ['🔵', '⚪', '⚪', '⚪', '🔵'],
         ['🔳', '🔳', '🔴', '🔳', '🔳']
     ], 1),
-    Level([['⚪', '🔵', '⚪', '🔵', '⚫'],
-           ['⚫', '⚫', '🟣', '⚫', '⚪'],
-           ['⚫', '⚫', '🔴', '⚫', '⚪'],
-           ], 3)
+
 ]
 
 
@@ -77,14 +74,10 @@ def main():
     initial_state = State(rows, columns, board)
     print(initial_state)
     game = Game(initial_state)
-    game.play()
+    game.dfs_play()
+    # game.bfs_play()
+    # game.play(initial_state)
     # print(initial_state)
-
-#     initial_grid = [
-#         ['⚪', '🔵', '⚪', '🔵', '⚫'],
-#         ['⚫', '⚫', '🟣', '⚫', '⚪'],
-#         ['⚫', '⚫', '🔴', '⚫', '⚪']
-
 
 #     ]
 #     rows = len(initial_grid)
@@ -94,6 +87,7 @@ def main():
 #     for i in range(rows):
 #         for j in range(columns):
 #             symbol = initial_grid[i][j]
+
 
 #             if symbol == '🔳':
 #                 cell_type = 'Out'             elif symbol == '⚫':

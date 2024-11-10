@@ -17,8 +17,10 @@ class State:
         return grid
 
     def getMagnetCoords(self, magnet_type):
+        
         for row in self.board:
             for cell in row:
                 if cell.type == magnet_type or cell.type == f'White{magnet_type}':
                     return cell.x, cell.y
         return None
+

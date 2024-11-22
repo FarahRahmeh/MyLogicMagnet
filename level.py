@@ -6,5 +6,5 @@ class Level:
 
     def __str__(self):
         board_display = "\n".join(" ".join(row) for row in self.level_grid)
-        return f"Board:\n{board_display}\nAllowed Moves: {self.allowed_moves}\n"
-
+        # return f"Board:\n{board_display}\nAllowed Moves: {self.allowed_moves}\n"
+        return f"{board_display}\n"

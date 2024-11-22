@@ -3,6 +3,7 @@ from level import Level
 from state import State
 from copy import deepcopy
 from collections import deque
+import heapq
 
 
 class Game:
@@ -246,7 +247,8 @@ class Game:
                     new_state = self.checkMove(
                         current_state, magnet_type, target_x, target_y)
                     if new_state and self.state_str(new_state) not in visited:
-                        new_path = path + [{'magnet': magnet_type, 'x': target_x, 'y': target_y}]
+                        new_path = path + \
+                            [{'magnet': magnet_type, 'x': target_x, 'y': target_y}]
                         queue.append((new_state, new_path))  # add to end
 
         print("bfs No solution found.")
@@ -279,10 +281,49 @@ class Game:
                         current_state, magnet_type, target_x, target_y)
                     # valid & not repetitive
                     if new_state and self.state_str(new_state) not in visited:
-                        new_path = path +    [{'magnet': magnet_type, 'x': target_x, 'y': target_y}]
+                        new_path = path + \
+                            [{'magnet': magnet_type, 'x': target_x, 'y': target_y}]
                         stack.append((new_state, new_path))
 
         print("dfs No solution found.")
+        return None
+#!......................................................................................................⚡
+
+    def ucs_solver(self):
+        pqueue = [(0, self.initial_state, [])]
+        visited = set()
+
+        while pqueue:
+            cost, current_state, path = heapq.heappop(pqueue) 
+            print(f"Visiting State with Cost: {cost}")
+            print(current_state)
+
+            if self.checkSuccess(current_state):
+                print("UCS found success solution")
+                return path
+            
+            state_here = self.state_str(current_state)
+            if state_here in visited:
+                continue
+            visited.add(state_here)
+            for magnet_type in ['Red', 'Purple', 'WhiteRed', 'WhitePurple']:
+                cur_coords = current_state.getMagnetCoords(magnet_type)
+                if cur_coords is None:
+                    continue
+                for ix, iy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    target_x, target_y = cur_coords[0] + ix, cur_coords[1] + iy
+                    new_state = self.checkMove(
+                        current_state, magnet_type, target_x, target_y)
+
+                    if new_state and self.state_str(new_state) not in visited:
+                        # move_cost = self.calCost(
+                        #     current_state, new_state, magnet_type, target_x, target_y)
+                        # new_cost = cost + move_cost
+                        new_cost = cost+1
+                        new_path = path +  [{'magnet': magnet_type, 'x': target_x, 'y': target_y}]
+                        heapq.heappush(pqueue, (new_cost, new_state, new_path))
+
+        print("UCS No solution found.")
         return None
 
     def state_str(self, state):
@@ -312,3 +353,15 @@ class Game:
                 print(move)
         else:
             print("dfs Could not solve the puzzle.")
+
+    def ucs_play(self):
+        solution_path = self.ucs_solver()
+        if solution_path:
+            print("Path to solution:")
+            for move in solution_path:
+                print(move)
+        else:
+            print("UCS could not solve the puzzle.")
+
+    # def calCost(self, current_state, new_state, magnet_type, target_x, target_y):
+    #     return 1

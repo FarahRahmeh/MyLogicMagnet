@@ -20,7 +20,7 @@ levels = [
         ['🔵', '⚪', '⚪', '⚪', '🔵'],
         ['🔳', '🔳', '🔴', '🔳', '🔳']
     ], 1),
-
+    
 ]
 
 
@@ -42,7 +42,6 @@ def main():
     display_levels()
     level_choice = get_user_choice()
     selected_level = levels[level_choice]
-
     # Convert level grid into a Cell board
     rows = len(selected_level.level_grid)
     columns = len(selected_level.level_grid[0])  # من اول سطر
@@ -71,11 +70,12 @@ def main():
                 cell_type = 'WhitePurple'
             board[i][j] = Cell(i, j, cell_type)
 
-    initial_state = State(rows, columns, board)
+    initial_state = State(rows, columns, board, cost=0)
     print(initial_state)
     game = Game(initial_state)
-    game.dfs_play()
+    game.ucs_play()
     # game.bfs_play()
+    # game.dfs_play()
     # game.play(initial_state)
     # print(initial_state)
 

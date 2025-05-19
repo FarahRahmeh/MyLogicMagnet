@@ -1,9 +1,7 @@
-from cells import Cell
-from level import Level
-from state import State
 from copy import deepcopy
 from collections import deque
 import heapq
+
 
 
 class Game:
@@ -19,13 +17,13 @@ class Game:
                     return False
         return True
 
-    def checkMove(self, state, magnet_type, target_x, target_y):
-        if target_x < 0 or target_x >= state.rows or target_y < 0 or target_y >= state.columns:
+    def checkMove(self, state, magnet_type, aim_x, aim_y):  # هل الحركة متاحة؟ هل تؤثر على شيء؟
+        if aim_x < 0 or aim_x >= state.rows or aim_y < 0 or aim_y >= state.columns:
             print("Move out of bounds!")
             return None
 
-        target_cell = state.board[target_x][target_y]
-        if target_cell.type not in ['Space', 'White']:
+        aim_cell = state.board[aim_x][aim_y]
+        if aim_cell.type not in ['Space', 'White']:
             print("Not Allowed Cell To Move!")
             return None
         current_coords = state.getMagnetCoords(magnet_type)
@@ -34,41 +32,39 @@ class Game:
 
         current_x, current_y = current_coords
         new_state = deepcopy(state)
-        # Move
-        if target_cell.type == 'Space':
-            new_state.board[target_x][target_y].type = magnet_type
-        elif target_cell.type == 'White':
-            new_state.board[target_x][target_y].type = f'White{magnet_type}'
-        # Update the original
+        # Move to new
+        if aim_cell.type == 'Space':
+            new_state.board[aim_x][aim_y].type = magnet_type
+        elif aim_cell.type == 'White':
+            new_state.board[aim_x][aim_y].type = f'White{magnet_type}'
+        # Update the prev
         if new_state.board[current_x][current_y].type == f'White{magnet_type}':
             new_state.board[current_x][current_y].type = 'White'
         else:
             new_state.board[current_x][current_y].type = 'Space'
-
-        # Push or Pull if Possible
-        self.checkRepelOrAttract(new_state, magnet_type, target_x, target_y)
-        print(f"Moved {magnet_type} to ({target_x}, {target_y})")
+        # Push or Pull
+        self.checkRepelOrAttract(new_state, magnet_type, aim_x, aim_y)
+        print(f"{magnet_type} moved to ({aim_x}, {aim_y})")
         return new_state
 
     def getUserMove(self, state):
         valid_magnets = ['Red', 'Purple', 'WhiteRed', 'WhitePurple']
-        magnet_type = input(f"Enter magnet type to move ({
-                            ', '.join(valid_magnets)}): ").strip()
+        magnet_type = input(f"choose magnet type ({', '.join(valid_magnets)}): ").strip()
         if magnet_type not in valid_magnets:
             print("Invalid magnet type!")
             return False
         try:
-            target_x = int(input("Enter target row: ").strip())
-            target_y = int(input("Enter target column: ").strip())
+            aim_x = int(input("Enter aim row: ").strip())
+            aim_y = int(input("Enter aim column: ").strip())
         except ValueError:
             print("Invalid coordinates!")
             return False
-        new_state = self.checkMove(state, magnet_type, target_x, target_y)
+        new_state = self.checkMove(state, magnet_type, aim_x, aim_y)
         if not new_state:
-            print("Move failed. Please try again.")
+            print("Move failed try again")
         else:
             self.current_state = new_state
-            print("Move successful!")
+            print("Move successful")
             print(self.current_state)
             if self.checkSuccess(new_state):
                 return True
@@ -81,7 +77,7 @@ class Game:
             self.attractMagnet(state, new_x, new_y)
         # print(self.initial_state)
 
-    def repelMagnet(self, state, x, y):
+    def repelMagnet(self, state, x, y):  # المغناطيس النهدي
         for j in range(state.columns):  # row
             if j != y:
                 self.repelCell(state, x, j)
@@ -93,31 +89,27 @@ class Game:
         cell = state.board[x][y]
         if cell.type in ['Iron', 'Red', 'WhiteIron', 'WhiteRed', 'WhitePurple']:
             if cell.type == 'Iron':
-                if self.isAdjacentToWhite(state, x, y):
+                if self.isWhiteNear(state, x, y):
                     cell.type = 'Space'
-                    adjacent_white_cell = self.getAdjacentWhiteCell(
-                        state, x, y)
+                    adjacent_white_cell = self.getWhiteNear(state,x,y)
                     if adjacent_white_cell:
                         adjacent_white_cell.type = 'WhiteIron'
-                    print(
-                        f"Cell at ({x}, {y}) repelled and merged into WhiteIron.")
+                    print(f"Cell at ({x}, {y}) repelled and merged into WhiteIron.")
                 # else:
                 #     cell.type = 'Space'
                 #     adjacent_white_cell.type == 'Iron'
 
             elif cell.type == 'Red':
-                if self.isAdjacentToWhite(state, x, y):
+                if self.isWhiteNear(state, x, y):
                     cell.type = 'Space'
-                    adjacent_white_cell = self.getAdjacentWhiteCell(
-                        state, x, y)
+                    adjacent_white_cell = self.getWhiteNear(state, x, y)
                     if adjacent_white_cell:
                         adjacent_white_cell.type = 'WhiteRed'
-                    print(
-                        f"Cell at ({x}, {y}) repelled and merged into WhiteRed.")
+                    print(f"Cell at ({x}, {y}) repelled and merged into WhiteRed.")
                 # else:
                 #     cell.type = 'Space'  # No merge, just clear the cell
 
-    def attractMagnet(self, state, x, y):
+    def attractMagnet(self, state, x, y):  # المغناطيس الأحمر
         for j in range(state.columns):
             if j != y:
                 self.pullCell(state, x, j, x, y)
@@ -125,14 +117,14 @@ class Game:
             if i != x:
                 self.pullCell(state, i, y, x, y)
 
-    def pullCell(self, state, target_x, target_y, magnet_x, magnet_y):
-        # target cell to check
-        cell = state.board[target_x][target_y]
+    def pullCell(self, state, aim_x, aim_y, magnet_x, magnet_y):  # ! red magnet
+        # aim cell to check
+        cell = state.board[aim_x][aim_y]
         if cell.type in ['Iron', 'Purple', 'WhiteIron', 'WhitePurple']:
             # Check vertical U-D
-            if target_x < magnet_x:
-                if target_x + 1 < state.rows:  # down
-                    next_cell = state.board[target_x + 1][target_y]
+            if aim_x < magnet_x:
+                if aim_x + 1 < state.rows:  # down
+                    next_cell = state.board[aim_x + 1][aim_y]
                     if next_cell.type == 'White':
                         if cell.type == 'WhiteIron' or cell.type == 'WhitePurple':
                             next_cell.type = cell.type
@@ -146,10 +138,10 @@ class Game:
                         next_cell.type = cell.type
                         cell.type = 'Space'
 
-            elif target_x > magnet_x:
+            elif aim_x > magnet_x:
                 # up
-                if target_x - 1 >= 0:
-                    next_cell = state.board[target_x - 1][target_y]
+                if aim_x - 1 >= 0:
+                    next_cell = state.board[aim_x - 1][aim_y]
                     if next_cell.type == 'White':
                         if cell.type == 'WhiteIron' or cell.type == 'WhitePurple':
                             next_cell.type = cell.type
@@ -164,9 +156,9 @@ class Game:
                         cell.type = 'Space'
 
             # Check horizontal L-R
-            if target_y < magnet_y:
-                if target_y + 1 < state.columns:  # R
-                    next_cell = state.board[target_x][target_y + 1]
+            if aim_y < magnet_y:
+                if aim_y + 1 < state.columns:  # R
+                    next_cell = state.board[aim_x][aim_y + 1]
                     if next_cell.type == 'White':
                         if cell.type == 'WhiteIron' or cell.type == 'WhitePurple':
                             next_cell.type = cell.type
@@ -179,9 +171,9 @@ class Game:
                             cell.type = 'White'
                         next_cell.type = cell.type
                         cell.type = 'Space'
-            elif target_y > magnet_y:
-                if target_y - 1 >= 0:  # L
-                    next_cell = state.board[target_x][target_y - 1]
+            elif aim_y > magnet_y:
+                if aim_y - 1 >= 0:  # L
+                    next_cell = state.board[aim_x][aim_y - 1]
                     if next_cell.type == 'White':
                         if cell.type == 'WhiteIron' or cell.type == 'WhitePurple':
                             next_cell.type = cell.type
@@ -196,21 +188,20 @@ class Game:
                         next_cell.type = cell.type
                         cell.type = 'Space'
             else:
-                print(f"Cell at ({target_x}, {
-                      target_y}) cannot move closer to the magnet.")
+                print(f"Cell at ({aim_x}, {aim_y}) cannot move closer to magnet.")
 
-    def isAdjacentToWhite(self, state, x, y):
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            nx, ny = x + dx, y + dy
+    def isWhiteNear(self, state, x, y):
+        for ix, iy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nx, ny = x + ix, y + iy
             if 0 <= nx < state.rows and 0 <= ny < state.columns:
                 adjacent_cell = state.board[nx][ny]
                 if adjacent_cell.type == 'White':
                     return True
         return False
 
-    def getAdjacentWhiteCell(self, state, x, y):
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            nx, ny = x + dx, y + dy
+    def getWhiteNear(self, state, x, y):
+        for ix, iy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nx, ny = x + ix, y + iy
             if 0 <= nx < state.rows and 0 <= ny < state.columns:
                 adjacent_cell = state.board[nx][ny]
                 if adjacent_cell.type == 'White':
@@ -218,8 +209,8 @@ class Game:
         return None
 
     def getNeighbourCell(self, state, x, y):
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            nx, ny = x + dx, y + dy
+        for ix, iy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nx, ny = x + ix, y + iy
             if 0 <= nx < state.rows and 0 <= ny < state.columns:
                 neighbour = state.board[nx][ny]
                 return neighbour
@@ -242,15 +233,12 @@ class Game:
                 if cur_coords is None:
                     continue
                 for ix, iy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-
-                    target_x, target_y = cur_coords[0]+ix, cur_coords[1]+iy
+                    aim_x, aim_y = cur_coords[0]+ix, cur_coords[1]+iy
                     new_state = self.checkMove(
-                        current_state, magnet_type, target_x, target_y)
+                        current_state, magnet_type, aim_x, aim_y)
                     if new_state and self.state_str(new_state) not in visited:
-                        new_path = path + \
-                            [{'magnet': magnet_type, 'x': target_x, 'y': target_y}]
+                        new_path = path +[f"'{magnet_type}' ({aim_x},{aim_y})"]
                         queue.append((new_state, new_path))  # add to end
-
         print("bfs No solution found.")
         return None
     #!......................................................................................................⚡
@@ -258,7 +246,6 @@ class Game:
     def dfs_solver(self):
         stack = [(self.initial_state, [])]  # state, path LIFO
         visited = set()
-
         while stack:
             current_state, path = stack.pop()
             state_here = self.state_str(current_state)
@@ -274,15 +261,13 @@ class Game:
                 cur_coords = current_state.getMagnetCoords(magnet_type)
                 if cur_coords is None:
                     continue
-
                 for ix, iy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    target_x, target_y = cur_coords[0] + ix, cur_coords[1] + iy
+                    aim_x, aim_y = cur_coords[0] + ix, cur_coords[1] + iy
                     new_state = self.checkMove(
-                        current_state, magnet_type, target_x, target_y)
+                        current_state, magnet_type, aim_x, aim_y)
                     # valid & not repetitive
                     if new_state and self.state_str(new_state) not in visited:
-                        new_path = path + \
-                            [{'magnet': magnet_type, 'x': target_x, 'y': target_y}]
+                        new_path = path +[f"'{magnet_type}' ({aim_x},{aim_y})"]
                         stack.append((new_state, new_path))
 
         print("dfs No solution found.")
@@ -294,14 +279,13 @@ class Game:
         visited = set()
 
         while pqueue:
-            cost, current_state, path = heapq.heappop(pqueue) 
+            cost, current_state, path = heapq.heappop(pqueue)
             print(f"Visiting State with Cost: {cost}")
             print(current_state)
-
             if self.checkSuccess(current_state):
                 print("UCS found success solution")
                 return path
-            
+
             state_here = self.state_str(current_state)
             if state_here in visited:
                 continue
@@ -311,20 +295,101 @@ class Game:
                 if cur_coords is None:
                     continue
                 for ix, iy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    target_x, target_y = cur_coords[0] + ix, cur_coords[1] + iy
+                    aim_x, aim_y = cur_coords[0] + ix, cur_coords[1] + iy
                     new_state = self.checkMove(
-                        current_state, magnet_type, target_x, target_y)
+                        current_state, magnet_type, aim_x, aim_y)
 
                     if new_state and self.state_str(new_state) not in visited:
-                        # move_cost = self.calCost(
-                        #     current_state, new_state, magnet_type, target_x, target_y)
-                        # new_cost = cost + move_cost
-                        new_cost = cost+1
-                        new_path = path +  [{'magnet': magnet_type, 'x': target_x, 'y': target_y}]
+                        move_cost = self.calCost()
+                        new_cost = cost+move_cost
+                        new_path = path +[f"'{magnet_type}' ({aim_x},{aim_y})"]
                         heapq.heappush(pqueue, (new_cost, new_state, new_path))
 
         print("UCS No solution found.")
         return None
+#!......................................................................................................⚡
+
+    def heuristic(self, state):
+        cnt = 0
+        for row in state.board:
+            for cell in row:
+                if cell.type == 'White':
+                    cnt += 1
+        return cnt
+#!......................................................................................................⚡
+
+    def hill_climbing_solver(self):
+        current_state = self.initial_state
+        path = []
+        visited = set()
+        while True:
+            if self.checkSuccess(current_state):
+                print("Hill climbing found success solution")
+                return path 
+            state_here = self.state_str(current_state)
+            if state_here in visited:
+                print("Cycle found and No better solution found")
+                return None
+            visited.add(state_here)
+            best_son_state = None
+            best_son_heuristic = self.heuristic(current_state)
+            for magnet_type in ['Red', 'Purple', 'WhiteRed', 'WhitePurple']:
+                cur_coords = current_state.getMagnetCoords(magnet_type)
+                if cur_coords is None:
+                    continue
+                for ix, iy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    aim_x, aim_y = cur_coords[0] + ix, cur_coords[1] + iy
+                    new_state = self.checkMove(current_state, magnet_type, aim_x, aim_y)
+                    if new_state:
+                        new_heuristic = self.heuristic(new_state)
+                        if new_heuristic < best_son_heuristic:
+                            best_son_heuristic = new_heuristic
+                            best_son_state = new_state
+                            best_son_step = f"'{magnet_type}' ({aim_x},{aim_y})"
+            if best_son_state and best_son_heuristic < self.heuristic(current_state):
+                current_state = best_son_state
+                path.append(best_son_step)
+            else:
+                print("No better son found")
+                return None
+
+#!......................................................................................................⚡
+
+    def a_star_solver(self):
+        pqueue = [(0,0, self.initial_state, [])]
+        visited = set()
+
+        while pqueue:
+            cost_heurstic,all_cost, current_state, path = heapq.heappop(pqueue)
+            if self.checkSuccess(current_state):
+                print("A* found a success solution")
+                
+                return path
+            state_here = self.state_str(current_state)
+            if state_here in visited:
+                continue
+            visited.add(state_here)
+            for magnet_type in ['Red', 'Purple', 'WhiteRed', 'WhitePurple']:
+                cur_coords = current_state.getMagnetCoords(magnet_type)
+                if cur_coords is None:
+                    continue
+                for ix, iy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    aim_x, aim_y = cur_coords[0] + ix, cur_coords[1] + iy
+                    new_state = self.checkMove(
+                        current_state, magnet_type, aim_x, aim_y)
+                    if new_state and self.state_str(new_state) not in visited:
+                        heu_cost = self.heuristic(new_state)
+                        all_cost= all_cost + self.calCost()
+                        cost_heurstic = all_cost + heu_cost
+                        new_path = path +[f"'{magnet_type}' ({aim_x},{aim_y})"]
+                        heapq.heappush(
+                            pqueue, (cost_heurstic,all_cost, new_state, new_path))
+
+        print("A* could not find a solution.")
+        return None
+
+
+#!......................................................................................................⚡
 
     def state_str(self, state):
         return ''.join([''.join([cell.type for cell in row]) for row in state.board])
@@ -337,31 +402,49 @@ class Game:
                 break
 
     def bfs_play(self):
-        solution_path = self.bfs_solver()
-        if solution_path:
+        path_to_ans = self.bfs_solver()
+        if path_to_ans:
             print("Path to solution:")
-            for move in solution_path:
+            for move in path_to_ans:
                 print(move)
         else:
-            print("bfs Could not solve the puzzle.")
+            print("bfs could not solve the game")
 
     def dfs_play(self):
-        solution_path = self.dfs_solver()
-        if solution_path:
+        path_to_ans = self.dfs_solver()
+        if path_to_ans:
             print("Path to solution:")
-            for move in solution_path:
+            for move in path_to_ans:
                 print(move)
         else:
-            print("dfs Could not solve the puzzle.")
+            print("dfs could not solve the game")
 
     def ucs_play(self):
-        solution_path = self.ucs_solver()
-        if solution_path:
+        path_to_ans = self.ucs_solver()
+        if path_to_ans:
             print("Path to solution:")
-            for move in solution_path:
+            for move in path_to_ans:
                 print(move)
         else:
-            print("UCS could not solve the puzzle.")
+            print("UCS could not solve the game")
 
-    # def calCost(self, current_state, new_state, magnet_type, target_x, target_y):
-    #     return 1
+    def hill_climbing_play(self):
+        path_to_ans = self.hill_climbing_solver()
+        if path_to_ans:
+            print("Path to solution:")
+            for move in path_to_ans:
+                print(move)
+        else:
+            print("Hill climbing could not solve the game")
+
+    def a_star_play(self):
+        path_to_ans = self.a_star_solver()
+        if path_to_ans:
+            print("Path to solution:")
+            for move in path_to_ans:
+                print(move)
+        else:
+            print("A* could not solve the game")
+
+    def calCost(self):
+        return 1
